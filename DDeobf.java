@@ -28,7 +28,7 @@ public class DDeobf{
 			obfFolderPath = args[0];
 			obfDictPath = args[1];
 		}catch(ArrayIndexOutOfBoundsException e){
-			System.out.println("Usage: java Parser <obfFolderPath> <obfDictPath>");
+			System.out.println("Usage: java -jar Parser <obfFolderPath> <obfDictPath>");
 			System.exit(1);
 		}
 
