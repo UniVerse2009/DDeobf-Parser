@@ -38,9 +38,9 @@ public class DDeobf{
 		ArrayList<String> fileLists = allFileList(obfFolderPath);
 
 		int count = 1;
-		System.out.println("Start to modify file...\n");
+		System.out.println("\nStart to modify file...\n");
 		for(String str : fileLists){
-			System.out.print("\rModify: " + str + " (" + count + "/" + fileLists.size() + ")");
+			System.out.print("\rModify: " + new File(str).getName());
 			System.out.flush();
 			String content = new String(Files.readAllBytes(Paths.get(str)));
 			String result = modify(content, map);
@@ -58,7 +58,7 @@ public class DDeobf{
 
 	public static Map<String, String> loadDict(String path){
 		Map<String, String> map = new HashMap<>();
-		System.out.println("Load Dictonary... \n");
+		System.out.println("Load Dictonary... ");
 		try(BufferedReader bf = new BufferedReader(new FileReader(path))){
 			String line;
 			int count = 0;
@@ -93,7 +93,7 @@ public class DDeobf{
 	}
 
 	public static ArrayList<String> allFileList(String path){
-		System.out.println("Get all File list");
+		System.out.println("\nGet all File list");
 		ArrayList<String> allFilePath = new ArrayList<>();
 		ArrayList<String> allDirPath = new ArrayList<>();
 
@@ -111,7 +111,7 @@ public class DDeobf{
 			}
 		allDirPath.remove(allDirPath.size() - 1);
 		}
-		System.out.println("\nGet: " + allFilePath.size() + " file");
+		System.out.println("Get: " + allFilePath.size() + " file");
 		return allFilePath;
 	}
 }
