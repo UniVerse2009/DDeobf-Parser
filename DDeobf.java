@@ -1,4 +1,5 @@
 import java.lang.ArrayIndexOutOfBoundsException;
+import java.lang.StringBuilder;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 
 public class DDeobf{
 	public static void main(String[] args)throws IOException{
+		long start = System.nanoTime();
 		String obfFolderPath =  "";
 		String obfDictPath = "";
 
@@ -28,7 +30,7 @@ public class DDeobf{
 			obfFolderPath = args[0];
 			obfDictPath = args[1];
 		}catch(ArrayIndexOutOfBoundsException e){
-			System.out.println("Usage: java -jar Parser <obfFolderPath> <obfDictPath>");
+			System.out.println("Usage: java -jar DDeobf <obfFolderPath> <obfDictPath>");
 			System.exit(1);
 		}
 
@@ -51,6 +53,7 @@ public class DDeobf{
 		}
 
 		System.out.println("\nDone!");
+		System.out.println("Time: " + (System.nanoTime() - start) + "ns");
 	}
 
 	public static Map<String, String> loadDict(String path){
@@ -76,11 +79,17 @@ public class DDeobf{
 	}
 
 	public static String modify(String content, Map<String, String> dict){
-		String cache = content;
+		StringBuilder sb = new StringBuilder(content);
 		for(Map.Entry<String, String> entry : dict.entrySet()){
-			cache = cache.replaceAll("\\b" + entry.getKey() + "\\b", entry.getValue());
+			String key = entry.getKey();
+			int index = sb.indexOf(key);
+			while(index != -1){
+				String value = entry.getValue();
+				sb.replace(index, index + key.length(), value);
+				index = sb.indexOf(key, index + value.length());
+			}
 		}
-		return cache;
+		return sb.toString();
 	}
 
 	public static ArrayList<String> allFileList(String path){
