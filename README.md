@@ -60,7 +60,6 @@ If you want to build it yourself:
 
 **Notes**
 
-Only exact word matches (\bword\b) are replaced. Partial matches are ignored.
 
 The original files are directly overwritten. Make sure to back up your files if needed.
 
