@@ -40,8 +40,7 @@ public class DDeobf{
 		int count = 1;
 		System.out.println("\nStart to modify file...\n");
 		for(String str : fileLists){
-			System.out.print("\rModify: " + new File(str).getName());
-			System.out.flush();
+			System.out.println("Modify: " + str);
 			String content = new String(Files.readAllBytes(Paths.get(str)));
 			String result = modify(content, map);
 			try(BufferedWriter bf = new BufferedWriter(new FileWriter(str))){
