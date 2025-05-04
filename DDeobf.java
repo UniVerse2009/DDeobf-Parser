@@ -14,30 +14,36 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
 public class DDeobf{
-	public static void main(String[] args)throws IOException{
+	public static void main(String[] args)throws IOException, InterruptedException{
 		long start = System.nanoTime();
 		String obfFolderPath =  "";
 		String obfDictPath = "";
+		int threadCount = 0;
 
 		System.out.println("==========Parser App==========");
 
 		try{
 			obfFolderPath = args[0];
 			obfDictPath = args[1];
+			threadCount = Integer.parseInt(args[2]);
 		}catch(ArrayIndexOutOfBoundsException e){
-			System.out.println("Usage: java -jar DDeobf <obfFolderPath> <obfDictPath>");
+			System.out.println("Usage: java -jar DDeobf <obfFolderPath> <obfDictPath> <threadCount>");
 			System.exit(1);
 		}
 
 		Map<String, String> map = loadDict(obfDictPath);
-		ArrayList<String> fileLists = allFileList(obfFolderPath);
+		// ArrayList<String> fileLists = allFileList(obfFolderPath);
 
-		int count = 1;
+		/*int count = 1;
 		System.out.println("\nStart to modify file...\n");
 		for(String str : fileLists){
 			System.out.println("Modify: " + str);
@@ -49,7 +55,29 @@ public class DDeobf{
 				e.printStackTrace();
 			}
 			count++;
+		}*/
+
+		Queue<String> q = allFileList(obfFolderPath);
+
+		ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+		for(String s : q){
+			final String current_s = s;
+			executor.submit(() -> {
+				try {
+ 					System.out.println(Thread.currentThread().getName() + " - Modify: " + new File(current_s).getName());
+					String content = new String(Files.readAllBytes(Paths.get(current_s)));
+					final String result = modify(content, map);
+					try(BufferedWriter bf = new BufferedWriter(new FileWriter(current_s))){
+                				bf.write(result);
+					}
+					}catch(IOException e){
+						e.printStackTrace();
+					}
+				});
 		}
+
+		executor.shutdown();
+		executor.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
 
 		System.out.println("\nDone!");
 		System.out.println("Time: " + (System.nanoTime() - start) + "ns");
@@ -91,9 +119,9 @@ public class DDeobf{
 		return sb.toString();
 	}
 
-	public static ArrayList<String> allFileList(String path){
+	public static Queue<String> allFileList(String path){
 		System.out.println("\nGet all File list");
-		ArrayList<String> allFilePath = new ArrayList<>();
+		/*ArrayList<String> allFilePath = new ArrayList<>();
 		ArrayList<String> allDirPath = new ArrayList<>();
 
 		allDirPath.add(path);
@@ -111,6 +139,23 @@ public class DDeobf{
 		allDirPath.remove(allDirPath.size() - 1);
 		}
 		System.out.println("Get: " + allFilePath.size() + " file");
-		return allFilePath;
+		return allFilePath;*/
+
+		Queue<String> file = new ConcurrentLinkedDeque<>();
+		Queue<String> folder = new ConcurrentLinkedDeque<>();
+
+		folder.add(path);
+		while(!folder.isEmpty()){
+			File f = new File(folder.poll());
+			for(File f_list : f.listFiles()){
+				if(f_list.isFile()){
+					file.add(f_list.getPath());
+				}else{
+					folder.add(f_list.getPath());
+				}
+			}
+		}
+
+		return file;
 	}
 }
