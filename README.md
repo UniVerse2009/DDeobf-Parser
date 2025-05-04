@@ -18,7 +18,7 @@ No external dependencies
 
 **Usage**
 
-```java -jar DDeobf.jar <folderPath> <dictionaryFilePath>```
+```java -jar DDeobf.jar <folderPath> <dictionaryFilePath> <threadCount>```
 
 **Arguments:**
 
@@ -28,6 +28,8 @@ No external dependencies
 Each line must be in the format:
 
 obfuscatedName,deobfuscatedName
+
+>`<threadCount>: Amount of threads to use.Opsional`
 
 
 **Example**

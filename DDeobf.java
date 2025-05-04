@@ -1,6 +1,3 @@
-import java.lang.ArrayIndexOutOfBoundsException;
-import java.lang.StringBuilder;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 
@@ -15,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import java.util.Queue;
+import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,50 +32,33 @@ public class DDeobf{
 		try{
 			obfFolderPath = args[0];
 			obfDictPath = args[1];
-			threadCount = Integer.parseInt(args[2]);
 		}catch(ArrayIndexOutOfBoundsException e){
 			System.out.println("Usage: java -jar DDeobf <obfFolderPath> <obfDictPath> <threadCount>");
 			System.exit(1);
 		}
 
-		Map<String, String> map = loadDict(obfDictPath);
-		// ArrayList<String> fileLists = allFileList(obfFolderPath);
-
-		/*int count = 1;
-		System.out.println("\nStart to modify file...\n");
-		for(String str : fileLists){
-			System.out.println("Modify: " + str);
-			String content = new String(Files.readAllBytes(Paths.get(str)));
-			String result = modify(content, map);
-			try(BufferedWriter bf = new BufferedWriter(new FileWriter(str))){
-				bf.write(result);
-			}catch(IOException e){
-				e.printStackTrace();
+		try{
+			if(args[2].equals("dynamic")){
+				threadCount = Runtime.getRuntime().availableProcessors();
+			}else{
+				threadCount = Integer.parseInt(args[2]);
 			}
-			count++;
-		}*/
-
-		Queue<String> q = allFileList(obfFolderPath);
-
-		ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-		for(String s : q){
-			final String current_s = s;
-			executor.submit(() -> {
-				try {
- 					System.out.println(Thread.currentThread().getName() + " - Modify: " + new File(current_s).getName());
-					String content = new String(Files.readAllBytes(Paths.get(current_s)));
-					final String result = modify(content, map);
-					try(BufferedWriter bf = new BufferedWriter(new FileWriter(current_s))){
-                				bf.write(result);
-					}
-					}catch(IOException e){
-						e.printStackTrace();
-					}
-				});
+		}catch(ArrayIndexOutOfBoundsException e){
+			threadCount = 1;
 		}
 
-		executor.shutdown();
-		executor.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+		Map<String, String> map = loadDict(obfDictPath);
+		Queue<String> q;
+
+		if(threadCount > 1){
+			q = allFileList1(obfFolderPath);
+			start_mt(map, q, threadCount);
+		}else if(threadCount == 1){
+			q = allFileList0(obfFolderPath);
+			start_st(map, q);
+		}else{
+			System.exit(1);
+		}
 
 		System.out.println("\nDone!");
 		System.out.println("Time: " + (System.nanoTime() - start) + "ns");
@@ -85,7 +66,7 @@ public class DDeobf{
 
 	public static Map<String, String> loadDict(String path){
 		Map<String, String> map = new HashMap<>();
-		System.out.println("Load Dictonary... ");
+		System.out.println("Load Dictionary... ");
 		try(BufferedReader bf = new BufferedReader(new FileReader(path))){
 			String line;
 			int count = 0;
@@ -119,28 +100,8 @@ public class DDeobf{
 		return sb.toString();
 	}
 
-	public static Queue<String> allFileList(String path){
+	public static Queue<String> allFileList1(String path){
 		System.out.println("\nGet all File list");
-		/*ArrayList<String> allFilePath = new ArrayList<>();
-		ArrayList<String> allDirPath = new ArrayList<>();
-
-		allDirPath.add(path);
-		while(!allDirPath.isEmpty()){
-			String target = allDirPath.get(allDirPath.size() - 1);
-			File file = new File(target);
-			for(File f : file.listFiles()){
-				String name = new File(target, f.getName()).getPath();
-				if(f.isFile()){
-					allFilePath.add(name);
-				}else{
-					allDirPath.add(0, new File(name).getPath());
-				}
-			}
-		allDirPath.remove(allDirPath.size() - 1);
-		}
-		System.out.println("Get: " + allFilePath.size() + " file");
-		return allFilePath;*/
-
 		Queue<String> file = new ConcurrentLinkedDeque<>();
 		Queue<String> folder = new ConcurrentLinkedDeque<>();
 
@@ -157,5 +118,62 @@ public class DDeobf{
 		}
 
 		return file;
+	}
+
+	public static Queue<String> allFileList0(String path){
+		System.out.println("\nGet all File list");
+		Queue<String> file = new ArrayDeque<>();
+		Queue<String> folder = new ArrayDeque<>();
+
+		folder.add(path);
+		while(!folder.isEmpty()){
+			File f = new File(folder.poll());
+			for(File f_list : f.listFiles()){
+				if(f_list.isFile()){
+					file.add(f_list.getPath());
+				}else{
+					folder.add(f_list.getPath());
+				}
+			}
+		}
+
+		return file;
+	}
+
+	public static void start_mt(Map<String, String> map, Queue<String> path, int thread)throws InterruptedException{
+		// Queue must ConcurrentLinkedDeque
+		ExecutorService executor = Executors.newFixedThreadPool(thread);
+		for(String s : path){
+			final String current_s = s;
+			executor.submit(() -> {
+				try {
+ 					System.out.println(Thread.currentThread().getName() + " -> Modify: " + new File(current_s).getName());
+					String content = new String(Files.readAllBytes(Paths.get(current_s)));
+					final String result = modify(content, map);
+					try(BufferedWriter bf = new BufferedWriter(new FileWriter(current_s))){
+                				bf.write(result);
+					}
+					}catch(IOException e){
+						e.printStackTrace();
+					}
+				});
+		}
+
+		executor.shutdown();
+		executor.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+	}
+
+	public static void start_st(Map<String, String> map, Queue<String> path)throws IOException{
+		// Queue must ArrayDeque
+		for(String current_s : path){
+			System.out.println(Thread.currentThread().getName() + " ->Modify: " + new File(current_s).getName());
+			String content = new String(Files.readAllBytes(Paths.get(current_s)));
+			final String result = modify(content, map);
+			try(BufferedWriter bf = new BufferedWriter(new FileWriter(current_s))){
+				bf.write(result);
+			}catch(IOException e){
+				e.printStackTrace();
+			}
+		}
 	}
 }
